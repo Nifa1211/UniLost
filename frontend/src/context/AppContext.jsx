@@ -8,15 +8,15 @@ const AppContextProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [user, setUser] = useState(null);
+  const [profileImage, setProfileImage] = useState(null); // shared across navbar + profile
   const currencySymbol = '$';
 
-  // Fetch items from backend
+  // Fetch all items
   useEffect(() => {
     const fetchItems = async () => {
       try {
         const result = await api.getItems();
         if (result.success) {
-          // Map backend items to frontend format
           const mappedItems = result.items.map(item => ({
             _id: item.id.toString(),
             name: item.name,
@@ -38,25 +38,31 @@ const AppContextProvider = ({ children }) => {
         setLoading(false);
       }
     };
-
     fetchItems();
   }, []);
 
-  // Fetch user if token exists
+  // Fetch user + profile image whenever token changes
   useEffect(() => {
+    if (!token) {
+      setUser(null);
+      setProfileImage(null);
+      return;
+    }
     const fetchUser = async () => {
-      if (token) {
-        try {
-          const result = await api.getCurrentUser();
-          if (result.success) {
-            setUser(result.user);
-          }
-        } catch (error) {
-          console.error('Error fetching user:', error);
+      try {
+        const result = await api.getUserProfile();
+        if (result.success) {
+          setUser(result.user);
+          setProfileImage(
+            result.user.profile_image
+              ? `http://localhost:5000${result.user.profile_image}`
+              : null
+          );
         }
+      } catch (error) {
+        console.error('Error fetching user:', error);
       }
     };
-
     fetchUser();
   }, [token]);
 
@@ -67,7 +73,9 @@ const AppContextProvider = ({ children }) => {
     token,
     setToken,
     user,
-    setUser
+    setUser,
+    profileImage,
+    setProfileImage, // call this after saving a new photo
   };
 
   return (
